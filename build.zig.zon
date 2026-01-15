@@ -1,0 +1,12 @@
+.{
+    .name = .chip8_emulator,
+    .version = "0.0.0",
+    .minimum_zig_version = "0.16.0-dev.731+958faa703",
+    .fingerprint = 0x11aa2051cecabcf6,
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
