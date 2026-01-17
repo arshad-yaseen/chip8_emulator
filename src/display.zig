@@ -36,7 +36,9 @@ pub const Self = @This();
 
 pub const DisplayError = error{ OutOfMemory, FensterOpenFailed };
 
-const Key = enum(u8) { escape = 27 };
+const Key = enum(u8) {
+    escape = 27
+};
 
 fenster: fenster_def,
 scale: u32,

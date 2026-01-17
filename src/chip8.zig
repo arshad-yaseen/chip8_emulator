@@ -97,8 +97,34 @@ pub fn run(self: *Self) Chip8Error!void {
 }
 
 fn fde(self: *Self) void {
-    _ = @as(u16, self.memory[self.PC]) << 8 | @as(u16, self.memory[self.PC + 1]);
+    const instruction = @as(u16, self.memory[self.PC]) << 8 | @as(u16, self.memory[self.PC + 1]);
     self.PC += 2;
+
+    const decoded = decode(instruction);
+
+    switch (decoded.opcode) {
+        0xD => {
+        },
+        else => {}
+    }
+}
+
+const Decoded = struct {
+    opcode: u4,
+    second: u4,
+    third: u4,
+    forth: u4,
+};
+
+// instruction (u16) = 0b[opcode][first][second][third]
+// each 4 bytes
+fn decode(instruction: u16) Decoded {
+    return .{
+        .opcode = @intCast((instruction & 0xF000) >> 12),
+        .second = @intCast((instruction & 0xF00) >> 8),
+        .third = @intCast((instruction & 0xF0) >> 4),
+        .forth = @intCast(instruction & 0xF)
+    };
 }
 
 fn loadProgram(self: *Self) Chip8Error!void {
