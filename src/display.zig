@@ -23,7 +23,9 @@ pub const display_width = 64;
 pub const display_height = 32;
 pub const fps = 60;
 pub const fduration: i64 = 1000 / fps;
-pub const instructions_per_frame: u8 = 11;
+
+pub const default_instructions_per_frame: u8 = 11; // 660 per second
+pub const default_scale: u32 = 10;
 
 const display_size = display_width * display_height;
 const packed_pixels_size = display_size / 8;

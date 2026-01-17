@@ -16,7 +16,9 @@ const Chip8Error = error {
 } || Display.DisplayError;
 
 pub const Chip8Opts = struct {
-    program: []const u8
+    program: []const u8,
+    scale: u32 = Display.default_scale,
+    instructions_per_frame: u8 = Display.default_instructions_per_frame,
 };
 
 allocator: std.mem.Allocator,
@@ -43,7 +45,7 @@ pub fn init(allocator: std.mem.Allocator, opts: Chip8Opts) Chip8Error!Self {
         .stack = [_]u16{0} ** stack_size,
         .V = [_]u8{0} ** register_size,
 
-        .display = try Display.init(allocator, 10),
+        .display = try Display.init(allocator, opts.scale),
 
         .delay_timer = 0,
         .sound_timer = 0,
@@ -73,7 +75,7 @@ pub fn run(self: *Self) Chip8Error!void {
     while (!self.display.loop()) {
         const fstart = self.display.time();
 
-        for (0..Display.instructions_per_frame) |_| {
+        for (0..self.opts.instructions_per_frame) |_| {
             // do stuff here
         }
 

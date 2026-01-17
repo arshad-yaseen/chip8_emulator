@@ -7,7 +7,9 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    var chip8 = try Chip8.init(allocator, .{ .program = "roms/ibm_logo.ch8" });
+    var chip8 = try Chip8.init(allocator, .{
+        .program = "roms/ibm_logo.ch8",
+    });
     defer chip8.deinit();
 
     try chip8.run();
