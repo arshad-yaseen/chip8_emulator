@@ -70,8 +70,21 @@ pub fn run(self: *Self) Chip8Error!void {
     try self.display.open();
     defer self.display.close();
 
-    while (!self.display.shouldClose()) {
-        // do stuff
+    while (!self.display.loop()) {
+        const fstart = self.display.time();
+
+        for (0..Display.instructions_per_frame) |_| {
+            // do stuff here
+        }
+
+        const elapsed = self.display.time() - fstart;
+
+        if (elapsed < Display.fduration) {
+            self.display.sleep(Display.fduration - elapsed);
+        }
+
+        if (self.delay_timer > 0) self.delay_timer -= 1;
+        if (self.sound_timer > 0) self.sound_timer -= 1;
     }
 }
 

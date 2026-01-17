@@ -19,12 +19,11 @@ extern fn fenster_close(f: *fenster_def) void;
 extern fn fenster_sleep(ms: i64) void;
 extern fn fenster_time() i64;
 
-const Key = enum(u8) {
-    escape = 27
-};
-
-const display_width = 64;
-const display_height = 32;
+pub const display_width = 64;
+pub const display_height = 32;
+pub const fps = 60;
+pub const fduration: i64 = 1000 / fps;
+pub const instructions_per_frame: u8 = 11;
 
 const display_size = display_width * display_height;
 const packed_pixels_size = display_size / 8;
@@ -32,6 +31,10 @@ const packed_pixels_size = display_size / 8;
 pub const Self = @This();
 
 pub const DisplayError = error{OutOfMemory, FensterOpenFailed};
+
+const Key = enum(u8) {
+    escape = 27
+};
 
 fenster: fenster_def,
 scale: u32,
@@ -77,7 +80,15 @@ pub fn close(self: *Self) void {
     fenster_close(&self.fenster);
 }
 
-pub fn shouldClose(self: *Self) bool {
+pub fn time(_: *Self) i64 {
+    return fenster_time();
+}
+
+pub fn sleep(_: *Self, ms: i64) void {
+    return fenster_sleep(ms);
+}
+
+pub fn loop(self: *Self) bool {
     const res = fenster_loop(&self.fenster) != 0;
 
     if(self.isKeyPressed(.escape)) {
