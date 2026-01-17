@@ -13,6 +13,29 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    exe.root_module.link_libc = true;
+
+    exe.root_module.addCSourceFile(.{
+            .file = b.path("libs/fenster.c"),
+            .flags = &.{},
+    });
+
+    exe.root_module.addIncludePath(b.path("libs"));
+
+    switch (target.result.os.tag) {
+        .linux => {
+            exe.root_module.linkSystemLibrary("X11", .{});
+        },
+        .windows => {
+            exe.root_module.linkSystemLibrary("gdi32", .{});
+            exe.root_module.linkSystemLibrary("user32", .{});
+        },
+        .macos => {
+            exe.root_module.linkFramework("Cocoa", .{});
+        },
+        else => {},
+    }
+
     b.installArtifact(exe);
 
     const run_step = b.step("run", "Run the app");
