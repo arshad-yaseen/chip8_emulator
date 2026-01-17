@@ -9,6 +9,8 @@ const register_size = 16;
 
 pub const Self = @This();
 
+const Chip8Error = error {} || Display.DisplayError;
+
 memory: [memory_size]u8,
 
 PC: u16,
@@ -21,7 +23,9 @@ sound_timer: u8,
 
 display: Display,
 
-pub fn init() Self {
+allocator: std.mem.Allocator,
+
+pub fn init(allocator: std.mem.Allocator) Chip8Error!Self {
     var chip8 = Self{
         .memory = [_]u8{0} ** memory_size,
 
@@ -31,10 +35,12 @@ pub fn init() Self {
         .stack = [_]u16{0} ** stack_size,
         .V = [_]u8{0} ** register_size,
 
-        .display = Display.init(),
+        .display = try Display.init(allocator, 10),
 
         .delay_timer = 0,
         .sound_timer = 0,
+
+        .allocator = allocator,
     };
 
     chip8.loadFonts();
@@ -42,7 +48,14 @@ pub fn init() Self {
     return chip8;
 }
 
-pub fn run(_: *Self) anyerror!void {}
+pub fn run(self: *Self) Chip8Error!void {
+    try self.display.open();
+    defer self.display.close();
+
+    while (!self.display.shouldClose()) {
+        // do stuff
+    }
+}
 
 fn loadFonts(self: *Self) void {
     const font_set = [80]u8{
