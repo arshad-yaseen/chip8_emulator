@@ -121,7 +121,7 @@ pub fn render(self: *Self, scale: u32) void {
     }
 }
 
-fn pixelColor(_: *Self, on: bool) u32 {
+inline fn pixelColor(_: *Self, on: bool) u32 {
     return if (on) 0xFFFFFFFF else 0x00000000;
 }
 
