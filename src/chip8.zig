@@ -18,7 +18,7 @@ const Chip8Error = error {
 pub const Chip8Opts = struct {
     program: []const u8,
     scale: u32 = Display.default_scale,
-    instructions_per_frame: u8 = Display.default_instructions_per_frame,
+    ips: u32 = Display.default_ips,
 };
 
 allocator: std.mem.Allocator,
@@ -75,7 +75,7 @@ pub fn run(self: *Self) Chip8Error!void {
     while (!self.display.loop()) {
         const fstart = self.display.time();
 
-        for (0..self.opts.instructions_per_frame) |_| {
+        for (0..self.opts.ips / Display.fps) |_| {
             // do stuff here
         }
 
