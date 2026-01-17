@@ -7,6 +7,8 @@ const memory_size = 4096;
 const stack_size = 16;
 const register_size = 16;
 
+const program_start = 0x200; // from 512
+
 pub const Self = @This();
 
 const Chip8Error = error {
@@ -39,7 +41,7 @@ pub fn init(allocator: std.mem.Allocator, opts: Chip8Opts) Chip8Error!Self {
     var chip8 = Self{
         .memory = [_]u8{0} ** memory_size,
 
-        .PC = 0x200,
+        .PC = program_start,
         .I = 0,
 
         .stack = [_]u16{0} ** stack_size,
@@ -76,7 +78,9 @@ pub fn run(self: *Self) Chip8Error!void {
         const fstart = self.display.time();
 
         for (0..self.opts.ips / Display.fps) |_| {
-            // do stuff here
+            if(self.PC + 1 <= self.memory.len) {
+                self.fde();
+            }
         }
 
         self.display.render(self.opts.scale);
@@ -92,11 +96,14 @@ pub fn run(self: *Self) Chip8Error!void {
     }
 }
 
+fn fde(self: *Self) void {
+    _ = @as(u16, self.memory[self.PC]) << 8 | @as(u16, self.memory[self.PC + 1]);
+    self.PC += 2;
+}
+
 fn loadProgram(self: *Self) Chip8Error!void {
     const file = std.fs.cwd().openFile(self.opts.program, .{}) catch return error.ProgramOpenFailed;
     defer file.close();
-
-    const program_start = 0x200;
 
     const stat = file.stat() catch return error.ProgramOpenFailed;
 
