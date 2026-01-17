@@ -2,5 +2,7 @@ const std = @import("std");
 const Chip8 = @import("chip8.zig").Chip8;
 
 pub fn main() !void {
-    _ = try Chip8.init();
+    var chip8 = Chip8.init();
+
+    try chip8.run();
 }
