@@ -9,7 +9,19 @@ const register_size = 16;
 
 pub const Self = @This();
 
-const Chip8Error = error {} || Display.DisplayError;
+const Chip8Error = error {
+    ProgramTooLarge,
+    ProgramReadFailed,
+    ProgramOpenFailed
+} || Display.DisplayError;
+
+pub const Chip8Opts = struct {
+    program: []const u8
+};
+
+allocator: std.mem.Allocator,
+display: Display,
+opts: Chip8Opts,
 
 memory: [memory_size]u8,
 
@@ -21,11 +33,7 @@ V: [register_size]u8,
 delay_timer: u8,
 sound_timer: u8,
 
-display: Display,
-
-allocator: std.mem.Allocator,
-
-pub fn init(allocator: std.mem.Allocator) Chip8Error!Self {
+pub fn init(allocator: std.mem.Allocator, opts: Chip8Opts) Chip8Error!Self {
     var chip8 = Self{
         .memory = [_]u8{0} ** memory_size,
 
@@ -41,11 +49,21 @@ pub fn init(allocator: std.mem.Allocator) Chip8Error!Self {
         .sound_timer = 0,
 
         .allocator = allocator,
+
+        .opts = opts,
     };
+
+    errdefer chip8.deinit();
+
+    try chip8.loadProgram();
 
     chip8.loadFonts();
 
     return chip8;
+}
+
+pub fn deinit(self: *Self) void {
+    self.display.deinit();
 }
 
 pub fn run(self: *Self) Chip8Error!void {
@@ -54,6 +72,29 @@ pub fn run(self: *Self) Chip8Error!void {
 
     while (!self.display.shouldClose()) {
         // do stuff
+    }
+}
+
+fn loadProgram(self: *Self) Chip8Error!void {
+    const file = std.fs.cwd().openFile(self.opts.program, .{}) catch return error.ProgramOpenFailed;
+    defer file.close();
+
+    const program_start = 0x200;
+
+    const stat = file.stat() catch return error.ProgramOpenFailed;
+
+    if(stat.size > memory_size - program_start) {
+        return error.ProgramTooLarge;
+    }
+
+    var buffer: [4096]u8 = undefined;
+    var reader = file.reader(&buffer);
+    const contents = reader.interface.allocRemaining(self.allocator, std.Io.Limit.limited(memory_size - program_start)) catch return error.ProgramReadFailed;
+    defer self.allocator.free(contents);
+
+    // program from 512 to ...
+    for (contents, 0..) |byte, i| {
+        self.memory[program_start + i] = byte;
     }
 }
 
@@ -77,6 +118,7 @@ fn loadFonts(self: *Self) void {
         0xF0, 0x80, 0xF0, 0x80, 0x80, // F
     };
 
+    // fonts are from 80 to 159
     for (font_set, 0..) |pixel, i| {
         self.memory[0x50 + i] = pixel;
     }

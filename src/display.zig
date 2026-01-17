@@ -63,6 +63,10 @@ pub fn init(allocator: std.mem.Allocator, scale: u32) DisplayError!Self {
     };
 }
 
+pub fn deinit(self: *Self) void {
+    self.allocator.free(self.buffer);
+}
+
 pub fn open(self: *Self) DisplayError!void {
     if (fenster_open(&self.fenster) != 0) {
         return error.FensterOpenFailed;
@@ -71,7 +75,6 @@ pub fn open(self: *Self) DisplayError!void {
 
 pub fn close(self: *Self) void {
     fenster_close(&self.fenster);
-    self.allocator.free(self.buffer);
 }
 
 pub fn shouldClose(self: *Self) bool {
