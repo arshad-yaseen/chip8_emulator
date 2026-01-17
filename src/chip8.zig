@@ -11,11 +11,10 @@ const program_start = 0x200; // from 512
 
 pub const Self = @This();
 
-const Chip8Error = error {
-    ProgramTooLarge,
-    ProgramReadFailed,
-    ProgramOpenFailed
-} || Display.DisplayError;
+const Chip8Error = error{ ProgramTooLarge, ProgramReadFailed, ProgramOpenFailed } || Display.DisplayError;
+
+const font_start = 0x50;
+const font_height = 5;
 
 pub const Chip8Opts = struct {
     program: []const u8,
@@ -31,11 +30,27 @@ memory: [memory_size]u8,
 
 PC: u16,
 I: u16,
-stack: [stack_size]u16,
+stack: Stack,
 V: [register_size]u8,
 
 delay_timer: u8,
 sound_timer: u8,
+
+pub const Stack = struct {
+    stack: [stack_size]u16,
+
+    pub fn init() Stack {
+        return .{ .stack = [_]u16{0} ** stack_size };
+    }
+
+    pub fn push(self: *Stack, item: u16) void {
+        self.stack[self.stack.len - 1] = item;
+    }
+
+    pub fn pop(self: *Stack) u16 {
+        return self.stack[self.stack.len - 1];
+    }
+};
 
 pub fn init(allocator: std.mem.Allocator, opts: Chip8Opts) Chip8Error!Self {
     var chip8 = Self{
@@ -44,7 +59,7 @@ pub fn init(allocator: std.mem.Allocator, opts: Chip8Opts) Chip8Error!Self {
         .PC = program_start,
         .I = 0,
 
-        .stack = [_]u16{0} ** stack_size,
+        .stack = Stack.init(),
         .V = [_]u8{0} ** register_size,
 
         .display = try Display.init(allocator, opts.scale),
@@ -78,7 +93,7 @@ pub fn run(self: *Self) Chip8Error!void {
         const fstart = self.display.time();
 
         for (0..self.opts.ips / Display.fps) |_| {
-            if(self.PC + 1 < self.memory.len) {
+            if (self.PC + 1 < self.memory.len) {
                 self.fde();
             }
         }
@@ -104,12 +119,73 @@ fn fde(self: *Self) void {
 
     switch (decoded.opcode) {
         0x0 => {
-            self.display.clear();
+            switch (instruction) {
+                0x00E0 => {
+                    self.display.clear();
+                },
+                0x00EE => {
+                    // return from subroutine
+                    self.PC = self.stack.pop();
+                },
+                else => {},
+            }
+        },
+        0x2 => {
+            self.stack.push(self.PC);
+            self.PC = combineLast3Parts(decoded);
         },
         0x1 => {
-            self.PC = combine3Parts(decoded);
+            self.PC = combineLast3Parts(decoded);
         },
-        else => {}
+        0x6 => {
+            const value = combineLast2Parts(decoded);
+            self.V[@intCast(decoded.second)] = value;
+        },
+        0x7 => {
+            const value = combineLast2Parts(decoded);
+            self.V[decoded.second] +%= value;
+        },
+        0xA => {
+            self.I = combineLast3Parts(decoded);
+        },
+        0xD => {
+            const x = self.V[decoded.second] % Display.display_width;
+            const y = self.V[decoded.third] % Display.display_height;
+            const n = decoded.fourth;
+
+            // VF
+            self.V[0xF] = 0;
+
+            for (0..n) |row| {
+                const sprite_byte = self.memory[self.I + row];
+
+                for (0..8) |bit| {
+                    const actual_pixel_on = self.display.isPixelOn(x, y);
+                    const current_pixel_on = (sprite_byte & (@as(u8, 0x80) >> @as(u3, @intCast(bit)))) != 0;
+
+                    if (actual_pixel_on and current_pixel_on) {
+                        self.display.togglePixel(x + @as(u8, @intCast(bit)), y + n);
+                        // VF
+                        self.V[0xF] = 1;
+                    } else if (current_pixel_on and !actual_pixel_on) {
+                        self.display.togglePixel(x + @as(u8, @intCast(bit)), y + n);
+                    }
+                }
+            }
+        },
+        0xF => {
+            switch (combineLast2Parts(decoded)) {
+                0x0029 => {
+                    const digit = self.V[@as(u8, decoded.second)];
+
+                    self.I = font_start + (digit * font_height);
+                },
+                else => {},
+            }
+        },
+        else => {
+            std.debug.print("opcode not implemented\n", .{decoded.opcode});
+        },
     }
 }
 
@@ -123,20 +199,15 @@ const Decoded = struct {
 // instruction (u16) = 0b[opcode][second][third][fourth]
 // each 4 bytes
 inline fn decode(instruction: u16) Decoded {
-    return .{
-        .opcode = @intCast((instruction & 0xF000) >> 12),
-        .second = @intCast((instruction & 0xF00) >> 8),
-        .third = @intCast((instruction & 0xF0) >> 4),
-        .fourth = @intCast(instruction & 0xF)
-    };
+    return .{ .opcode = @intCast((instruction & 0xF000) >> 12), .second = @intCast((instruction & 0x0F00) >> 8), .third = @intCast((instruction & 0x00F0) >> 4), .fourth = @intCast(instruction & 0x000F) };
 }
 
-fn combine2Parts(decoded: Decoded) u8  {
-    return 0xFF | @as(u8, decoded.third) << 4 | @as(u8, decoded.fourth);
+inline fn combineLast2Parts(decoded: Decoded) u8 {
+    return @as(u8, decoded.third) << 4 | @as(u8, decoded.fourth);
 }
 
-fn combine3Parts(decoded: Decoded) u12  {
-    return 0xFFF | @as(u12, decoded.second) << 8 | @as(u12, decoded.third) << 4 | @as(u12, decoded.fourth);
+inline fn combineLast3Parts(decoded: Decoded) u12 {
+    return @as(u12, decoded.second) << 8 | @as(u12, decoded.third) << 4 | @as(u12, decoded.fourth);
 }
 
 fn loadProgram(self: *Self) Chip8Error!void {
@@ -145,7 +216,7 @@ fn loadProgram(self: *Self) Chip8Error!void {
 
     const stat = file.stat() catch return error.ProgramOpenFailed;
 
-    if(stat.size > memory_size - program_start) {
+    if (stat.size > memory_size - program_start) {
         return error.ProgramTooLarge;
     }
 
@@ -182,6 +253,6 @@ fn loadFonts(self: *Self) void {
 
     // fonts are from 80 to 159
     for (font_set, 0..) |pixel, i| {
-        self.memory[0x50 + i] = pixel;
+        self.memory[font_start + i] = pixel;
     }
 }

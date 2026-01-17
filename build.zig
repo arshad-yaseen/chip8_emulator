@@ -16,8 +16,8 @@ pub fn build(b: *std.Build) void {
     exe.root_module.link_libc = true;
 
     exe.root_module.addCSourceFile(.{
-            .file = b.path("libs/fenster.c"),
-            .flags = &.{},
+        .file = b.path("libs/fenster.c"),
+        .flags = &.{},
     });
 
     exe.root_module.addIncludePath(b.path("libs"));

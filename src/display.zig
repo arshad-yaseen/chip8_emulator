@@ -36,9 +36,7 @@ pub const Self = @This();
 
 pub const DisplayError = error{ OutOfMemory, FensterOpenFailed };
 
-const Key = enum(u8) {
-    escape = 27
-};
+const Key = enum(u8) { escape = 27 };
 
 fenster: fenster_def,
 scale: u32,
@@ -72,6 +70,7 @@ pub fn init(allocator: std.mem.Allocator, scale: u32) DisplayError!Self {
 
 pub fn deinit(self: *Self) void {
     self.allocator.free(self.buffer);
+    self.close();
 }
 
 pub fn open(self: *Self) DisplayError!void {
@@ -144,6 +143,10 @@ pub inline fn isPixelOn(self: *Self, x: u8, y: u8) bool {
 
 // toggle pixel
 pub inline fn togglePixel(self: *Self, x: u8, y: u8) void {
+    if (x > display_width or y > display_height) {
+        return;
+    }
+
     const index = pixelIndex(x, y);
     const byte_idx = byteIndex(index);
     const offset = bitOffset(index);
