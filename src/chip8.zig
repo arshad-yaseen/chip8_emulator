@@ -79,6 +79,8 @@ pub fn run(self: *Self) Chip8Error!void {
             // do stuff here
         }
 
+        self.display.render(self.opts.scale);
+
         const elapsed = self.display.time() - fstart;
 
         if (elapsed < Display.fduration) {

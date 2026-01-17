@@ -9,6 +9,7 @@ pub fn main() !void {
 
     var chip8 = try Chip8.init(allocator, .{
         .program = "roms/ibm_logo.ch8",
+        .scale = 20,
     });
     defer chip8.deinit();
 

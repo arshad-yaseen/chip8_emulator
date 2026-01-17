@@ -25,6 +25,8 @@ pub const fps = 60;
 pub const fduration: i64 = 1000 / fps;
 
 pub const default_ips: u32 = 660; // 11 instuctions per frame
+
+// actural chip8 width and height are too small, we need to scale when rendering
 pub const default_scale: u32 = 10;
 
 const display_size = display_width * display_height;
@@ -32,11 +34,9 @@ const packed_pixels_size = display_size / 8;
 
 pub const Self = @This();
 
-pub const DisplayError = error{OutOfMemory, FensterOpenFailed};
+pub const DisplayError = error{ OutOfMemory, FensterOpenFailed };
 
-const Key = enum(u8) {
-    escape = 27
-};
+const Key = enum(u8) { escape = 27 };
 
 fenster: fenster_def,
 scale: u32,
@@ -93,11 +93,36 @@ pub fn sleep(_: *Self, ms: i64) void {
 pub fn loop(self: *Self) bool {
     const res = fenster_loop(&self.fenster) != 0;
 
-    if(self.isKeyPressed(.escape)) {
+    if (self.isKeyPressed(.escape)) {
         return true;
     }
 
     return res;
+}
+
+/// render pixels with scale handling
+pub fn render(self: *Self, scale: u32) void {
+    const scaled_width = display_width * scale;
+
+    for (0..display_height) |y| {
+        for (0..display_width) |x| {
+            const is_pixel_on = self.isPixelOn(@intCast(x), @intCast(y));
+            const color = self.pixelColor(is_pixel_on);
+
+            for (0..scale) |sy| {
+                for (0..scale) |sx| {
+                    const buf_x = x * scale + sx;
+                    const buf_y = y * scale + sy;
+
+                    self.buffer[buf_y * scaled_width + buf_x] = color;
+                }
+            }
+        }
+    }
+}
+
+fn pixelColor(_: *Self, on: bool) u32 {
+    return if (on) 0xFFFFFFFF else 0x00000000;
 }
 
 pub inline fn isKeyPressed(self: *Self, key: Key) bool {
