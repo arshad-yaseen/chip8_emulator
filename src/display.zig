@@ -164,3 +164,7 @@ inline fn byteIndex(index: u12) usize {
 inline fn bitOffset(index: u12) u3 {
     return @intCast(7 - index % 8);
 }
+
+pub fn clear(self: *Self) void {
+    @memset(self.buffer, 0);
+}

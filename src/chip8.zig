@@ -78,7 +78,7 @@ pub fn run(self: *Self) Chip8Error!void {
         const fstart = self.display.time();
 
         for (0..self.opts.ips / Display.fps) |_| {
-            if(self.PC + 1 <= self.memory.len) {
+            if(self.PC + 1 < self.memory.len) {
                 self.fde();
             }
         }
@@ -103,7 +103,11 @@ fn fde(self: *Self) void {
     const decoded = decode(instruction);
 
     switch (decoded.opcode) {
-        0xD => {
+        0x0 => {
+            self.display.clear();
+        },
+        0x1 => {
+            self.PC = combine3Parts(decoded);
         },
         else => {}
     }
@@ -113,18 +117,26 @@ const Decoded = struct {
     opcode: u4,
     second: u4,
     third: u4,
-    forth: u4,
+    fourth: u4,
 };
 
-// instruction (u16) = 0b[opcode][first][second][third]
+// instruction (u16) = 0b[opcode][second][third][fourth]
 // each 4 bytes
-fn decode(instruction: u16) Decoded {
+inline fn decode(instruction: u16) Decoded {
     return .{
         .opcode = @intCast((instruction & 0xF000) >> 12),
         .second = @intCast((instruction & 0xF00) >> 8),
         .third = @intCast((instruction & 0xF0) >> 4),
-        .forth = @intCast(instruction & 0xF)
+        .fourth = @intCast(instruction & 0xF)
     };
+}
+
+fn combine2Parts(decoded: Decoded) u8  {
+    return 0xFF | @as(u8, decoded.third) << 4 | @as(u8, decoded.fourth);
+}
+
+fn combine3Parts(decoded: Decoded) u12  {
+    return 0xFFF | @as(u12, decoded.second) << 8 | @as(u12, decoded.third) << 4 | @as(u12, decoded.fourth);
 }
 
 fn loadProgram(self: *Self) Chip8Error!void {
