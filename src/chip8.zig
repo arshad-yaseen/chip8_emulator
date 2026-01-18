@@ -132,26 +132,26 @@ fn fde(self: *Self) void {
         },
         0x2 => {
             self.stack.push(self.PC);
-            self.PC = combineLast3Parts(decoded);
+            self.PC = decoded.nnn;
         },
         0x1 => {
-            self.PC = combineLast3Parts(decoded);
+            self.PC = decoded.nnn;
         },
         0x6 => {
-            const value = combineLast2Parts(decoded);
-            self.V[@intCast(decoded.second)] = value;
+            const value = decoded.nn;
+            self.V[@intCast(decoded.first_n)] = value;
         },
         0x7 => {
-            const value = combineLast2Parts(decoded);
-            self.V[decoded.second] +%= value;
+            const value = decoded.nn;
+            self.V[decoded.first_n] +%= value;
         },
         0xA => {
-            self.I = combineLast3Parts(decoded);
+            self.I = decoded.nnn;
         },
         0xD => {
-            const x = self.V[decoded.second] % Display.display_width;
-            const y = self.V[decoded.third] % Display.display_height;
-            const n = decoded.fourth;
+            const x = self.V[decoded.first_n] % Display.display_width;
+            const y = self.V[decoded.second_n] % Display.display_height;
+            const n = decoded.third_n;
 
             // VF
             self.V[0xF] = 0;
@@ -178,9 +178,9 @@ fn fde(self: *Self) void {
             }
         },
         0xF => {
-            switch (combineLast2Parts(decoded)) {
+            switch (decoded.nn) {
                 0x0029 => {
-                    const digit = self.V[@as(u8, decoded.second)];
+                    const digit = self.V[@as(u8, decoded.first_n)];
 
                     self.I = font_start + (digit * font_height);
                 },
@@ -195,23 +195,30 @@ fn fde(self: *Self) void {
 
 const Decoded = struct {
     opcode: u4,
-    second: u4,
-    third: u4,
-    fourth: u4,
+    first_n: u4,
+    second_n: u4,
+    third_n: u4,
+    nn: u8,
+    nnn: u12,
 };
 
-// instruction (u16) = 0b[opcode][second][third][fourth]
+// instruction (u16) = 0b[opcode][first_n][second_n][third_n]
+//                               ~~~~~~~~~
+//                                   n
+//                                        ~~~~~~~~~~~~~~~~~~~
+//                                                 nn
+//                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                                            nnn
 // each 4 bytes
 inline fn decode(instruction: u16) Decoded {
-    return .{ .opcode = @intCast((instruction & 0xF000) >> 12), .second = @intCast((instruction & 0x0F00) >> 8), .third = @intCast((instruction & 0x00F0) >> 4), .fourth = @intCast(instruction & 0x000F) };
-}
-
-inline fn combineLast2Parts(decoded: Decoded) u8 {
-    return @as(u8, decoded.third) << 4 | @as(u8, decoded.fourth);
-}
-
-inline fn combineLast3Parts(decoded: Decoded) u12 {
-    return @as(u12, decoded.second) << 8 | @as(u12, decoded.third) << 4 | @as(u12, decoded.fourth);
+    return .{
+        .opcode = @intCast((instruction & 0xF000) >> 12),
+        .first_n = @intCast((instruction & 0x0F00) >> 8),
+        .second_n = @intCast((instruction & 0x00F0) >> 4),
+        .third_n = @intCast(instruction & 0x000F),
+        .nn = @intCast(instruction & 0x00FF),
+        .nnn = @intCast(instruction & 0x0FFF),
+    };
 }
 
 fn loadProgram(self: *Self) Chip8Error!void {
