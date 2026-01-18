@@ -163,12 +163,16 @@ fn fde(self: *Self) void {
                     const actual_pixel_on = self.display.isPixelOn(x, y);
                     const current_pixel_on = (sprite_byte & (@as(u8, 0x80) >> @as(u3, @intCast(bit)))) != 0;
 
-                    if (actual_pixel_on and current_pixel_on) {
-                        self.display.togglePixel(x + @as(u8, @intCast(bit)), y + n);
-                        // VF
-                        self.V[0xF] = 1;
-                    } else if (current_pixel_on and !actual_pixel_on) {
-                        self.display.togglePixel(x + @as(u8, @intCast(bit)), y + n);
+                    const pixel_x = (x + @as(u8, @intCast(bit)));
+                    const pixel_y = y + @as(u8, @intCast(row));
+
+                    if (current_pixel_on) {
+                        self.display.togglePixel(pixel_x, pixel_y);
+
+                        if (actual_pixel_on) {
+                            // VF
+                            self.V[0xF] = 1;
+                        }
                     }
                 }
             }
@@ -184,7 +188,7 @@ fn fde(self: *Self) void {
             }
         },
         else => {
-            std.debug.print("opcode not implemented\n", .{decoded.opcode});
+            std.debug.print("opcode not implemented\n", .{});
         },
     }
 }

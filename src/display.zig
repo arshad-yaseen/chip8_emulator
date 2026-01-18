@@ -143,7 +143,7 @@ pub inline fn isPixelOn(self: *Self, x: u8, y: u8) bool {
 
 // toggle pixel
 pub inline fn togglePixel(self: *Self, x: u8, y: u8) void {
-    if (x > display_width or y > display_height) {
+    if (x >= display_width or y >= display_height) {
         return;
     }
 
