@@ -203,8 +203,6 @@ const Decoded = struct {
 };
 
 // instruction (u16) = 0b[opcode][first_n][second_n][third_n]
-//                               ~~~~~~~~~
-//                                   n
 //                                        ~~~~~~~~~~~~~~~~~~~
 //                                                 nn
 //                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
