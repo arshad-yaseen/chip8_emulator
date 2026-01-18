@@ -36,8 +36,6 @@ pub const Self = @This();
 
 pub const DisplayError = error{ OutOfMemory, FensterOpenFailed };
 
-const Key = enum(u8) { escape = 27 };
-
 fenster: fenster_def,
 scale: u32,
 // packed
@@ -94,7 +92,7 @@ pub fn sleep(_: *Self, ms: i64) void {
 pub fn loop(self: *Self) bool {
     const res = fenster_loop(&self.fenster) != 0;
 
-    if (self.isKeyPressed(.escape)) {
+    if (self.isKeyPressed(27)) {
         return true;
     }
 
@@ -126,8 +124,8 @@ inline fn pixelColor(_: *Self, on: bool) u32 {
     return if (on) 0xFFFFFFFF else 0x00000000;
 }
 
-pub inline fn isKeyPressed(self: *Self, key: Key) bool {
-    return self.fenster.keys[@intFromEnum(key)] != 0;
+pub inline fn isKeyPressed(self: *Self, key: u8) bool {
+    return self.fenster.keys[key] != 0;
 }
 
 pub inline fn getPixel(self: *Self, x: u8, y: u8) u1 {
